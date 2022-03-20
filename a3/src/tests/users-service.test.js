@@ -1,3 +1,4 @@
+import 'regenerator-runtime/runtime';
 import {
   createUser,
   deleteUsersByUsername, findAllUsers,
@@ -104,34 +105,45 @@ describe('findUserById',  () => {
   });
 });
 
-
 describe('findAllUsers',  () => {
 
   // sample users we'll insert to then retrieve
   const usernames = [
     "larry", "curley", "moe"
   ];
-
+  const user1 = {
+    username: 'larry',
+    password: 'larry123',
+    email: 'larry@stooges.com'
+  };
+  const user2 = {
+    username: 'curly',
+    password: 'curly123',
+    email: 'curly@stooges.com'
+  };
+  const user3 = {
+    username: 'moe',
+    password: 'moe123',
+    email: 'moe@stooges.com'
+  };
+  const users = [user1, user2, user3];
   // setup data before test
-  beforeAll(() =>
+  beforeAll(() => {
     // insert several known users
-    usernames.map(username =>
-      createUser({
-        username,
-        password: `${username}123`,
-        email: `${username}@stooges.com`
-      })
-    )
-  );
+    createUser(user1);
+    createUser(user2);
+    createUser(user3);
+  });
 
   // clean up after ourselves
-  afterAll(() =>
+  afterAll(() => {
     // delete the users we inserted
-    usernames.map(username =>
-      deleteUsersByUsername(username)
-    )
-  );
+    deleteUsersByUsername(user1.username);
+    deleteUsersByUsername(user2.username);
+    deleteUsersByUsername(user3.username);
+  });
 
+  
   test('can retrieve all users from REST API', async () => {
     // retrieve all the users
     const users = await findAllUsers();
@@ -151,4 +163,4 @@ describe('findAllUsers',  () => {
       expect(user.email).toEqual(`${username}@stooges.com`);
     });
   });
-});
+})
