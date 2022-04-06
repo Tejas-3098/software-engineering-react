@@ -1,3 +1,4 @@
+import { async } from "regenerator-runtime";
 import {
 createTuit, updateTuit, findTuitById, deleteTuit, findAllTuits
 } from "../services/tuits-service";
@@ -7,6 +8,7 @@ createUser,
   deleteUsersByUsername, findAllUsers,
   findUserById
 } from "../services/users-service";
+import { deleteUser } from "./services";
 
 
 describe('can create tuit with REST API', () => {
@@ -18,69 +20,93 @@ describe('can create tuit with REST API', () => {
   };
   //sample tuit
   const newTuit = {
-     tuit: "You can take away my house, all my tricks and toys.One thing you can't take away...I am Ironman",
-     postedBy: tony
+     tuit: "You can take away my house, all my tricks and toys.One thing you can't take away...I am Ironman"
   };
 
-  beforeAll(() => {
+  var tuitId = null;
+  beforeAll(async() => {
     // remove any/all users to make sure we create it in the test
-    return deleteUsersByUsername(tony.username);
+    return await deleteUsersByUsername(tony.username);
   })
 
   // clean up after test runs
-  afterAll(() => {
+  afterAll(async() => {
     // remove any data we created
-    return deleteUsersByUsername(tony.username);
+    await deleteUsersByUsername(tony.username);
+    await deleteTuit(tuitId);
   })
 
   test('can insert new tuits with REST API', async () => {
-  // insert new user in the database
-  const newUser = await createUser(tony);
-  const createdTuit = await createTuit(newUser._id, newTuit.tuit);
-  //verify that inserted tuit matches parameter tuit
-  expect(createdTuit.tuit).toEqual(newTuit.tuit);
-  expect(createdTuit.postedBy).toEqual(newTuit.postedBy);
+    //Creating a new user
+    const createdUser1 = await createUser(tony);
+    //Checking whether the user gets created properly
+    expect(createdUser1.username).toEqual(tony.username);
+    expect(createdUser1.password).toEqual(tony.password);
+    expect(createdUser1.email).toEqual(tony.email);
+
+    //Storing the created user id so that we can use it to create a tuit
+    const createdUserId = createdUser1._id;
+
+    //Using that user id to create the tuit
+    const createdTuit1 = await createTuit(createdUserId, newTuit);
+
+    //Storing the created tuit's id in a variable so that it can be used to delete tuit after the test
+    tuitId = createdTuit1._id;
+
+    //Verifying that the properties of new tuit match with the ones we inserted
+    expect(createdTuit1.tuit).toEqual(newTuit.tuit);
+    expect(createdTuit1.postedBy).toEqual(createdUserId); 
   });
 });
 
-describe('can delete tuit wtih REST API', () => {
-  //sample 
-  let spideyTuit;
+describe('can delete tuit with REST API', () => {
+
+  
+  //sample user who posts tuits
   const spidey = {
     username: 'spiderman',
     password: 'iamspidey1234',
     email: 'spidey@nowayhome.com'
   };
-  const newTuit = {
-    tuit: "Now the whole world knows that I am spider man",
-    postedBy: spidey
+  //sample tuit 
+  const spideyTuit = {
+    tuit: "Now the whole world knows that I am spider man"
   };
 
+  var tuitId = null;
+
   // setup the tests before verification
-  beforeAll(() => {
-  // insert the sample user we then try to remove
-    const spideyUser = createUser(spidey);
-    spideyTuit = createTuit(spideyUser._id, newTuit.tuit);
+  beforeAll(async() => {
+    await deleteUsersByUsername(spidey.username);
   });
 
   // clean up after test runs
-  afterAll(() => {
+  afterAll(async() => {
     // remove any data we created
-    deleteUsersByUsername(spidey.username);
-    deleteTuit(spideyTuit._id);
+    await deleteUsersByUsername(spidey.username);
+    await deleteTuit(tuitId);
   });
 
-  test('can delete tuit using tid', async () => {
-    // delete a tuit by tid. Assumes tuit already exists
-    const status = await deleteTuit(spideyTuit._id);  
-    // verify we deleted at least one user by their username
+  test('can delete tuit using REST API', async () => {
+    const newSpideyUser = await createUser(spidey);
+    expect(newSpideyUser.username).toEqual(spidey.username);
+    expect(newSpideyUser.password).toEqual(spidey.password);
+    expect(newSpideyUser.email).toEqual(spidey.email);
+    
+    //Creating a new tuit for the user and checking
+    const spideyUserId = newSpideyUser._id;
+    const newSpideyTuit = await createTuit(spideyUserId, spideyTuit);
+    tuitId = newSpideyTuit._id;
+    expect(newSpideyTuit.tuit).toEqual(spideyTuit.tuit);  
+
+    const status = await deleteTuit(tuitId);
     expect(status.deletedCount).toBeGreaterThanOrEqual(1);
   });
 });
 
 describe('can retrieve a tuit by their primary key with REST API', () => {
-  let thanosUser;
-  let thanosTuit;
+  //let thanosUser;
+  //let thanosTuit;
   //sample user
   const thanos = {
     username: 'iamthanos',
@@ -88,36 +114,43 @@ describe('can retrieve a tuit by their primary key with REST API', () => {
     email: 'thanos@endgame.com'
   }; 
 
-  const hisTuit = {
-    tuit: "Dread it, run from it, destiny arrives all the same",
-    postedBy: thanos
+  const thanosTuit = {
+    tuit: "Dread it, run from it, destiny arrives all the same"
   };
 
+  var tuitId1 = null;
   // setup the tests before verification
-  beforeAll(() => {
+  beforeAll(async() => {
   // insert the sample user we then try to remove
-    thanosUser = createUser(thanos);
+    //thanosUser = createUser(thanos);
     //thanosTuit = createTuit(thanosUser._id, hisTuit.tuit);
+    await deleteUsersByUsername(thanos.username);
   });
 
   // clean up after test runs
-  afterAll(() => {
+  afterAll(async() => {
     // remove any data we created
-    return deleteUsersByUsername(thanos.username);
+    await deleteUsersByUsername(thanos.username);
+    await deleteTuit(tuitId1);
   });
   
   test('can retrieve tuit using primary key', async () => {
-    thanosUser = createUser(thanos);
-    thanosTuit = createTuit(thanosUser._id, hisTuit.tuit);
+    const thanosUser = await createUser(thanos);
+    expect(thanosUser.username).toEqual(thanos.username);
+    expect(thanosUser.password).toEqual(thanos.password);
+    expect(thanosUser.email).toEqual(thanos.email);
+
+    const newThanosTuit = await createTuit(thanosUser._id, thanosTuit);
     //verify new tuit matches paramater tuit
-    expect(thanosTuit.tuit).toEqual(hisTuit.tuit);
-    expect(thanosTuit.postedBy).toEqual(hisTuit.postedBy);
+    expect(newThanosTuit.tuit).toEqual(thanosTuit.tuit);
+    expect(newThanosTuit.postedBy).toEqual(thanosUser._id);
+    tuitId1 = newThanosTuit._id;
+    
+    //Retrieve the newly created tuit and check if it is the one which was created
+    const retrievedTuit = findTuitById(newThanosTuit._id);
+    expect(retrievedTuit._id).toEqual(newThanosTuit._id); 
+    expect(retrievedTuit.tuit).toEqual(newThanosTuit.tuit);
 
-    const postedTuit = findTuitById(thanosUser._id);
-
-    //verify retrieved tuit matches parameter tuit
-    expect(postedTuit.tuit).toEqual(hisTuit.tuit);
-    expect(postedTuit.postedBy).toEqual(hisTuit.postedBy);
   });
 });
 
@@ -153,5 +186,5 @@ describe('can retrieve all tuits with REST API', () => {
       expect(tuit.tuit).toEqual(hardcoded_tuits.tuit);
       expect(tuit.postedBy).toEqual(hardcoded_tuits.postedBy);
     })
-  });
-});
+  })
+})
